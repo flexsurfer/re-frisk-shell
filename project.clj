@@ -1,4 +1,4 @@
-(defproject re-frisk-shell "0.4.1"
+(defproject re-frisk-shell "0.4.3"
   :description "re-frisk ui shell"
   :url "https://github.com/flexsurfer/re-frisk"
   :license {:name "MIT"

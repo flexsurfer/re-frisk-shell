@@ -199,7 +199,7 @@
         [debugger-messages filtered-events deb-data]
         [:div.debugger-sidebar-controls
          [:div.debugger-sidebar-controls-import-export
-          (when-not imp-hndl
+          (when imp-hndl
             [:span
              [:span {:style {:cursor :pointer}
                      :on-click imp-hndl}
