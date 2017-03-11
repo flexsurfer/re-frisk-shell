@@ -1,7 +1,10 @@
 (ns re-frisk-shell.core
   (:require [reagent.core :as reagent]
             [goog.events :as goog-events]
-            [re-frisk-shell.frisk :as frisk])
+            [re-frisk-shell.frisk :as frisk]
+            [cljs.tools.reader :refer [read-string]]
+            [cljs.js :refer [empty-state eval js-eval]]
+            [clojure.string :as str])
   (:require-macros [reagent.ratom :refer [reaction]])
   (:import [goog.events EventType]))
 
@@ -88,63 +91,63 @@
                       ^{:key id} [frisk/Root x id state-atom]) [data])])))
 
 (defn re-frisk-shell [data deb-data {:keys [on-click x y width height]}]
-  (let [style (merge frisk-style {:resize "both" :width "300px" :height "200px"})
-        height (if (and ie? (not height)) 200 height)
-        style (merge style (when height {:height height :max-height height :overflow "auto"}))
-        style (merge style (when width {:width width :max-width width :overflow "auto"}))]
-    (when x (swap! draggable assoc :x x))
-    (when y (swap! draggable assoc :y y))
-    (fn [data deb-data]
-      (when (:deb-win-closed? @deb-data)
-        [:div {:style (merge {:position "fixed"
-                              :left (str (:x @draggable) "px")
-                              :top (str (:y @draggable) "px")
-                              :z-index 999}
-                             (when (or ie? (not (:x @draggable)))
-                               {:bottom "0px"
-                                :right  "20px"}))}
-         [:div {:style re-frisk-button-style
-                :on-mouse-down mouse-down-handler}
-          [visibility-button (:visible? (:data-frisk @deb-data)) (fn [_] (swap! deb-data assoc-in [:data-frisk :visible?] (not (:visible? (:data-frisk @deb-data)))))]
-          "re-frisk"]
-         [:div {:style arrow-style
-                :on-click on-click}
-          "\u2197"]
-         (when (:visible? (:data-frisk @deb-data))
-           [:div {:style style}
-            [re-frisk-panel @data]])]))))
+    (let [style (merge frisk-style {:resize "both" :width "300px" :height "200px"})
+          height (if (and ie? (not height)) 200 height)
+          style (merge style (when height {:height height :max-height height :overflow "auto"}))
+          style (merge style (when width {:width width :max-width width :overflow "auto"}))]
+      (when x (swap! draggable assoc :x x))
+      (when y (swap! draggable assoc :y y))
+      (fn [data deb-data]
+        (when (:deb-win-closed? @deb-data)
+          [:div {:style (merge {:position "fixed"
+                                :left (str (:x @draggable) "px")
+                                :top (str (:y @draggable) "px")
+                                :z-index 999}
+                               (when (or ie? (not (:x @draggable)))
+                                 {:bottom "0px"
+                                  :right  "20px"}))}
+           [:div {:style re-frisk-button-style
+                  :on-mouse-down mouse-down-handler}
+            [visibility-button (:visible? (:data-frisk @deb-data)) (fn [_] (swap! deb-data assoc-in [:data-frisk :visible?] (not (:visible? (:data-frisk @deb-data)))))]
+            "re-frisk"]
+           [:div {:style arrow-style
+                  :on-click on-click}
+            "\u2197"]
+           (when (:visible? (:data-frisk @deb-data))
+             [:div {:style style}
+              [re-frisk-panel @data]])]))))
 
 (defn debugger-messages [re-frame-events deb-data]
-  (reagent/create-class
-    {:display-name "debugger-messages"
-     :component-did-update
-                   (fn [this]
-                     (let [n (reagent/dom-node this)]
-                       (when (:scroll-bottom? @deb-data)
-                         (set! (.-scrollTop n) (.-scrollHeight n)))))
-     :reagent-render
-                   (fn []
-                     (let [clrs (:evnt-colors @deb-data)]
-                       [:div.debugger-sidebar-messages
-                        {:on-scroll #(let [t (.-target %)]
-                                       (swap! deb-data assoc
-                                              :scroll-bottom?
-                                              (= (.-scrollTop t) (- (.-scrollHeight t) (.-offsetHeight t)))))}
-                        (map-indexed (fn [id item]
-                                       (let [event (first (if (:event item) (:event item) item))
-                                             fx? (boolean (re-find #"-fx" (str event)))
-                                             db? (boolean (re-find #"-db" (str event)))
-                                             clr (event clrs)]
-                                         ^{:key id} [:div.messages-entry {:on-click #(swap! deb-data assoc :event-data item)}
-                                                     [:span {:style {:display "inline-block"
-                                                                     :background-color (cond clr clr fx? "#FF0000" db? "#00FF00" :else "#3d3d3d")
-                                                                     :opacity 0.5
-                                                                     :width "15px"
-                                                                     :height "15px"
-                                                                     :overflow "hidden"
-                                                                     :padding-bottom "4px"}}
-                                                      (cond fx? "fx" db? "db" :else "  ")]
-                                                     [:span.messages-entry-content (str event)]])) @re-frame-events)]))}))
+    (reagent/create-class
+      {:display-name "debugger-messages"
+       :component-did-update
+                     (fn [this]
+                       (let [n (reagent/dom-node this)]
+                         (when (:scroll-bottom? @deb-data)
+                           (set! (.-scrollTop n) (.-scrollHeight n)))))
+       :reagent-render
+                     (fn []
+                       (let [clrs (:evnt-colors @deb-data)]
+                         [:div.debugger-sidebar-messages
+                          {:on-scroll #(let [t (.-target %)]
+                                         (swap! deb-data assoc
+                                                :scroll-bottom?
+                                                (= (.-scrollTop t) (- (.-scrollHeight t) (.-offsetHeight t)))))}
+                          (map-indexed (fn [id item]
+                                         (let [event (first (if (:event item) (:event item) item))
+                                               fx? (boolean (re-find #"-fx" (str event)))
+                                               db? (boolean (re-find #"-db" (str event)))
+                                               clr (event clrs)]
+                                           ^{:key id} [:div.messages-entry {:on-click #(swap! deb-data assoc :event-data item)}
+                                                       [:span {:style {:display "inline-block"
+                                                                       :background-color (cond clr clr fx? "#FF0000" db? "#00FF00" :else "#3d3d3d")
+                                                                       :opacity 0.5
+                                                                       :width "15px"
+                                                                       :height "15px"
+                                                                       :overflow "hidden"
+                                                                       :padding-bottom "4px"}}
+                                                        (cond fx? "fx" db? "db" :else "  ")]
+                                                       [:span.messages-entry-content (str event)]])) @re-frame-events)]))}))
 
 (defn event-bar [deb-data]
   (let [evnt-key (reaction (first (or (:event (:event-data @deb-data)) (:event-data @deb-data))))
@@ -158,15 +161,44 @@
        [:div {:style {:position "absolute" :right "0px" :top "0px" :width "20px" :cursor "pointer"}
               :on-click #(swap! deb-data assoc :event-data nil)} "X"]])))
 
+(defn eval-str [s]
+  (eval (empty-state)
+        (read-string s)
+        {:eval       js-eval
+         :source-map true
+         :context    :expr}
+        (fn [result] result)))
+
+(defn filter-event [text]
+  (fn [item]
+    (let [name (str/lower-case (name (first (if (:event item) (:event item) item))))
+          text (str/lower-case text)]
+      (not= (str/index-of name text) nil))))
+
 (defn debugger-shell [re-frame-data re-frame-events deb-data & [imp-hndl exp-hndl]]
   (let [expand-by-default (reduce #(assoc-in %1 [:data-frisk %2 :expanded-paths] #{[]}) {} (range 1))
         expand-by-default2 (reduce #(assoc-in %1 [:data-frisk %2 :expanded-paths] #{[]}) {} (range 1))
         state-atom (reagent/atom expand-by-default)
-        state-atom2 (reagent/atom expand-by-default2)]
+        state-atom2 (reagent/atom expand-by-default2)
+        input-text (reagent/atom "")
+        filtered-events (reaction (if (= @input-text "")
+                                    @re-frame-events
+                                    (filter (filter-event @input-text) @re-frame-events)))
+        cljs-text (reagent/atom "")
+        input-cljs-text (reagent/atom "")
+        _ (swap! re-frame-data assoc :filter (reaction (if (= @cljs-text "")
+                                                         "empty"
+                                                         ((:value (eval-str @cljs-text))
+                                                          @(:app-db @re-frame-data)))))]
     (fn []
       [:div#debugger
        [:div.debugger-sidebar
-        [debugger-messages re-frame-events deb-data]
+        [:div {:style {:display :flex :justify-content :space-around}}
+         [:input {:placeholder "events filter"
+                  :on-change #(reset! input-text (-> % .-target .-value))}]
+         [:div {:style {:cursor :pointer}
+                :on-click #(reset! re-frame-events [])} "clear"]]
+        [debugger-messages filtered-events deb-data]
         (when imp-hndl
           [:div.debugger-sidebar-controls
            [:div.debugger-sidebar-controls-import-export
@@ -177,6 +209,13 @@
             [:span {:style {:cursor "pointer"}
                     :on-click exp-hndl} "Export"]]])]
        [:div#values
+        [:div {:style {:display :flex}}
+         [:textarea {:style {:width "400px" :height "40px"}
+                     :placeholder "(fn [app-db] {:value (:value app-db)}) or #(hash-map :value (:value %))"
+                     :on-change #(reset! input-cljs-text (-> % .-target .-value))}]
+         [:div {:style {:cursor :pointer :padding-left "5px" :padding-right "5px" :margin-left "5px"
+                        :background-color "#3d3d3d" :color :white}
+                :on-click #(reset! cljs-text @input-cljs-text)} "run"]]
         [:div {:style (merge frisk-style {:height (if (:event-data @deb-data) "60%" "100%")})}
          [:div
           (map-indexed (fn [id x]
