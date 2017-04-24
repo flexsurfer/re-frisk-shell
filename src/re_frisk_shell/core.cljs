@@ -189,7 +189,9 @@
         _ (swap! re-frame-data assoc :filter (reaction (if (= @cljs-text "")
                                                          "empty"
                                                          ((:value (eval-str @cljs-text))
-                                                          @(:app-db @re-frame-data)))))]
+                                                          @(:app-db @re-frame-data))))
+                                     :app-db-sorted (reaction (let [db @(:app-db @re-frame-data)]
+                                                                (if (map? db) (into (sorted-map) db) db))))]
     (fn []
       [:div#debugger
        [:div.debugger-sidebar
