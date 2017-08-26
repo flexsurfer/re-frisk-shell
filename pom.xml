@@ -3,7 +3,7 @@
   <groupId>re-frisk-shell</groupId>
   <artifactId>re-frisk-shell</artifactId>
   <packaging>jar</packaging>
-  <version>0.4.0</version>
+  <version>0.4.6</version>
   <name>re-frisk-shell</name>
   <description>re-frisk ui shell</description>
   <url>https://github.com/flexsurfer/re-frisk</url>
@@ -16,7 +16,7 @@
   <scm>
     <connection>scm:git:git://github.com/flexsurfer/re-frisk-shell.git</connection>
     <developerConnection>scm:git:ssh://git@github.com/flexsurfer/re-frisk-shell.git</developerConnection>
-    <tag>HEAD
+    <tag>6f7ffdfc6b7a0f8d8af77fdcaa0fcb21249ddbc7
 </tag>
     <url>https://github.com/flexsurfer/re-frisk-shell</url>
   </scm>
@@ -67,6 +67,36 @@
       <groupId>reagent</groupId>
       <artifactId>reagent</artifactId>
       <version>0.6.0</version>
+    </dependency>
+    <dependency>
+      <groupId>binaryage</groupId>
+      <artifactId>devtools</artifactId>
+      <version>0.7.2</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>com.taoensso</groupId>
+      <artifactId>sente</artifactId>
+      <version>1.11.0</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>com.cognitect</groupId>
+      <artifactId>transit-cljs</artifactId>
+      <version>0.8.239</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>figwheel-sidecar</groupId>
+      <artifactId>figwheel-sidecar</artifactId>
+      <version>0.5.4-7</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>com.cemerick</groupId>
+      <artifactId>piggieback</artifactId>
+      <version>0.2.1</version>
+      <scope>test</scope>
     </dependency>
   </dependencies>
 </project>

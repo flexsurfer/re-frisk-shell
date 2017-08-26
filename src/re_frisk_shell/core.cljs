@@ -224,7 +224,7 @@
         [:div {:style (merge frisk-style {:height (if (:event-data @deb-data) "calc(100% - 296px)" "calc(100% - 46px)")})}
          [:div
           (map-indexed (fn [id x]
-                         ^{:key id} [frisk/Root x id state-atom]) [@re-frame-data])]]
+                         ^{:key id} [frisk/Root x id state-atom]) [@(:app-db @re-frame-data)])]]
         [:div {:style (merge frisk-style {:height "250" :overflow "hidden" :display (if (:event-data @deb-data) "block" "none")})}
          [event-bar deb-data]
          [:div {:style {:overflow "auto" :height "100%"}}

@@ -25,7 +25,7 @@
 
 (defn ExpandAllButton [emit-fn data]
   [:button {:onClick #(emit-fn :expand-all data)
-            :style {:padding "3px"
+            :style {:padding "0px"
                     :borderTopLeftRadius "2px"
                     :borderBottomLeftRadius "2px"
                     :cursor "pointer"
@@ -35,7 +35,7 @@
 
 (defn CollapseAllButton [emit-fn data]
   [:button {:onClick #(emit-fn :collapse-all)
-            :style {:padding "3px"
+            :style {:padding "0px"
                     :cursor "pointer"
                     :borderTopRightRadius "2px"
                     :borderBottomRightRadius "2px"
@@ -230,7 +230,7 @@
         swappable (when (satisfies? IAtom data)
                     data)
         emit-fn (emit-fn-factory state-atom id swappable)]
-    [:div
+    [:div {:style {:color "#444444"}}
      [:div {:style {:padding "4px 2px"}}
       [ExpandAllButton emit-fn data]
       [CollapseAllButton emit-fn]]

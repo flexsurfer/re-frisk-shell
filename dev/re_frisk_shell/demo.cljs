@@ -3,10 +3,11 @@
     [reagent.core :as reagent]
     [taoensso.sente  :as sente]
     [taoensso.sente.packers.transit :as sente-transit]
-    [re-frisk-shell.core :as ui])
+    [re-frisk-shell.re-com.views :as ui-re-com])
   (:require-macros [reagent.ratom :refer [reaction]]))
 
-(defonce re-frame-data (reagent/atom {:app-db (reagent/atom "not connected")}))
+(defonce re-frame-data (reagent/atom {:app-db (reagent/atom "not connected")
+                                      :id-handler (reagent/atom "not connected")}))
 
 (defonce re-frame-events (reagent/atom []))
 (defonce deb-data (reagent/atom {}))
@@ -16,6 +17,10 @@
 
 (defn update-events [val]
   (swap! re-frame-events conj val))
+
+(defn update-id-handler [val]
+  (println "IPDATE HAN")
+  (reset! (:id-handler @re-frame-data) val))
 
 (let [{:keys [chsk ch-recv send-fn state]}
       (sente/make-channel-socket-client!
@@ -38,7 +43,8 @@
   [{:as ev-msg :keys [?data]}]
   (case (first ?data)
     :refrisk/app-db (update-app-db (second ?data))
-    :refrisk/events (update-events (second ?data))))
+    :refrisk/events (update-events (second ?data))
+    :refrisk/id-handler (update-id-handler (second ?data))))
 
 ;SENTE ROUTER
 (defonce router_ (atom nil))
@@ -54,7 +60,7 @@
 
 ;REAGENT RENDER
 (defn mount []
-  (reagent/render [ui/debugger-shell re-frame-data re-frame-events deb-data]
+  (reagent/render [ui-re-com/main re-frame-data re-frame-events]
                   (.getElementById js/document "app")))
 
 ;ENTRY POINT
