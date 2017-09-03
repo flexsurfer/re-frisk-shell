@@ -3,7 +3,7 @@
   <groupId>re-frisk-shell</groupId>
   <artifactId>re-frisk-shell</artifactId>
   <packaging>jar</packaging>
-  <version>0.4.6</version>
+  <version>0.5.0</version>
   <name>re-frisk-shell</name>
   <description>re-frisk ui shell</description>
   <url>https://github.com/flexsurfer/re-frisk</url>
@@ -16,7 +16,7 @@
   <scm>
     <connection>scm:git:git://github.com/flexsurfer/re-frisk-shell.git</connection>
     <developerConnection>scm:git:ssh://git@github.com/flexsurfer/re-frisk-shell.git</developerConnection>
-    <tag>6f7ffdfc6b7a0f8d8af77fdcaa0fcb21249ddbc7
+    <tag>1e4a4b45729d3b61399de72a82baa6defa2cceb7
 </tag>
     <url>https://github.com/flexsurfer/re-frisk-shell</url>
   </scm>
@@ -66,7 +66,12 @@
     <dependency>
       <groupId>reagent</groupId>
       <artifactId>reagent</artifactId>
-      <version>0.6.0</version>
+      <version>0.7.0</version>
+    </dependency>
+    <dependency>
+      <groupId>re-com</groupId>
+      <artifactId>re-com</artifactId>
+      <version>2.1.0</version>
     </dependency>
     <dependency>
       <groupId>binaryage</groupId>

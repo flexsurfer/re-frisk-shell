@@ -3,7 +3,8 @@
             [re-com.core :refer [v-box h-box gap box label
                                  h-split v-split
                                  input-text input-textarea p
-                                 checkbox scroller]]))
+                                 checkbox scroller]]
+            [re-frisk-shell.re-com.ui :refer [big-button]]))
 
 (defn live-debugger []
   (let [text-area-value (reagent/atom "")]

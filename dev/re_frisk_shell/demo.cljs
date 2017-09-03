@@ -19,7 +19,6 @@
   (swap! re-frame-events conj val))
 
 (defn update-id-handler [val]
-  (println "IPDATE HAN")
   (reset! (:id-handler @re-frame-data) val))
 
 (let [{:keys [chsk ch-recv send-fn state]}

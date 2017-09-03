@@ -1,4 +1,5 @@
-(ns re-frisk-shell.frisk)
+(ns re-frisk-shell.frisk
+  (:require [reagent.core :as reagent]))
 ;;original idea Odin Hole Standal https://github.com/Odinodin/data-frisk-reagent
 (declare DataFrisk)
 
@@ -239,3 +240,24 @@
                  :path []
                  :expanded-paths (get-in data-frisk [id :expanded-paths])
                  :emit-fn emit-fn}]]))
+
+(def expand-by-default (reduce #(assoc-in %1 [:data-frisk %2 :expanded-paths] #{[]}) {} (range 1)))
+
+(defn main-frisk [re-frame-data checkbox-sorted-val]
+  (let [state-atom (reagent/atom expand-by-default)]
+    (fn [_]
+      (let [db @(:app-db @re-frame-data)
+            db' (if (and @checkbox-sorted-val (map? db))
+                  (into (sorted-map) db)
+                  db)]
+        [Root db' 0 state-atom]))))
+
+(defn handler-frisk [re-frame-data]
+  (let [state-atom (reagent/atom expand-by-default)]
+    (fn [_]
+      [Root @(:id-handler @re-frame-data) 0 state-atom])))
+
+(defn event-frisk [deb-data]
+  (let [state-atom (reagent/atom expand-by-default)]
+    (fn [_]
+      [Root (get-in @deb-data [:event-data :event]) 0 state-atom])))

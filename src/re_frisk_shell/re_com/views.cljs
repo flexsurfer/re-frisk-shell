@@ -1,47 +1,67 @@
 (ns re-frisk-shell.re-com.views
   (:require-macros [reagent.ratom :refer [reaction]])
   (:require [reagent.core :as reagent]
-            [re-frisk-shell.re-com.ui :refer [small-button]]
+            [re-frisk-shell.re-com.ui :refer [small-button scroller]]
             [re-frisk-shell.re-com.vendors :refer [star]]
             [re-com.core :refer [v-box h-box gap box label
-                                 h-split v-split
                                  input-text input-textarea p
-                                 checkbox scroller] :refer-macros [handler-fn]]
+                                 checkbox] :refer-macros [handler-fn]]
+            [re-frisk-shell.re-com.splits :refer [h-split v-split]]
             [clojure.string :as str]
             [re-frisk-shell.frisk :as frisk]))
 
 (defn event-list-item []
-  (fn [item selected-tab-id checkbox-val]
-    (let [event (str (first (if (:event item) (:event item) item)))
-          ;selected? (= @selected-tab-id (:id tab))
+  (fn [item checkbox-val deb-data]
+    (let [clrs (:evnt-colors @deb-data)
+          event (str (first (:event item)))
+          selected? (= (get-in @deb-data [:event-data :indx]) (:indx item))
           namespace (str/split (str/replace event #":" "") #"/")
-          splited-label (str/split (first namespace) #"\.")]
-      [:a
-       {:href  "#"
-        :class (str "list-group-item")                      ;(when selected? " active"))
-        :style {:padding "5" :white-space :pre}}
-       ;:on-click (handler-fn (reset! selected-tab-id (:id tab)))}
-       [:span (if (and @checkbox-val (> (count namespace) 1))
-                (str ":" (str/join "." (mapv first splited-label))
-                     "/" (last namespace))
-                event)]])))
+          splited-label (str/split (first namespace) #"\.")
+          clr (get clrs (first (:event item)))]
+      [h-box
+       :children
+       [[:div {:style (merge {:width 5}
+                             (when clr {:background-color (str "#" clr)}))}]
+        [box
+         :size "1"
+         :child
+         [:a
+          {:href  "#"
+           :class (str "list-group-item" (when selected? " active"))
+           :style {:padding 5 :white-space :pre :width "100%"}
+           :on-click #(swap! deb-data assoc :event-data item)}
+          [:span (if (and @checkbox-val (> (count namespace) 1))
+                   (str ":" (str/join "." (mapv first splited-label))
+                        "/" (last namespace))
+                   event)]]]]])))
 
 (defn filter-event [text]
   (fn [item]
-    (let [name (str/lower-case (name (first (if (:event item) (:event item) item))))
+    (let [name (str/lower-case (name (first (:event item))))
           text (str/lower-case text)]
       (not= (str/index-of name text) nil))))
 
-(defn events-list []
-  (fn [filtered-events selected-tab-id checkbox-val]
-    [v-box
-     :class "list-group"
-     :children (for [item @filtered-events]
-                 [event-list-item item selected-tab-id checkbox-val])]))
 
-(defn events-view [re-frame-events]
-  (let [checkbox-val (reagent/atom nil)
-        selected-tab-id (reagent/atom nil)
+(defn events-scroller [filtered-events checkbox-val deb-data]
+  (reagent/create-class
+    {:display-name "debugger-messages"
+     :component-did-update
+                   (fn [this]
+                     (let [n (reagent/dom-node this)]
+                       (when (:scroll-bottom? @deb-data)
+                         (set! (.-scrollTop n) (.-scrollHeight n)))))
+     :reagent-render
+                   (fn []
+                     [scroller {:on-scroll #(let [t (.-target %)]
+                                              (swap! deb-data assoc
+                                                     :scroll-bottom?
+                                                     (= (- (.-scrollHeight t) (.-offsetHeight t)) (.-scrollTop t))))}
+                        (for [item @filtered-events]
+                          ^{:key item}
+                          [event-list-item item checkbox-val deb-data])])}))
+
+(defn events-view [re-frame-events deb-data imp-hndl exp-hndl]
+  (let [checkbox-val (reagent/atom true)
         text-val (reagent/atom "")
         filtered-events (reaction (if (= @text-val "")
                                     @re-frame-events
@@ -61,66 +81,64 @@
                                 :change-on-blur? false
                                 :placeholder "Filter events"
                                 :on-change #(reset! text-val %)]]
-                              [small-button "X"]]]
+                              [small-button {:on-click #(reset! text-val "")} "X"]]]
                   ;truncate checkbox
                   [checkbox
                    :model checkbox-val
                    :on-change #(reset! checkbox-val %)
                    :label "truncate"]
                   ;events
-                  [scroller
-                   :size "1"
-                   :v-scroll :auto
-                   :h-scroll :auto
-                   :child [events-list filtered-events selected-tab-id checkbox-val]]
+                  [events-scroller filtered-events checkbox-val deb-data]
                   ;bottom buttons
                   [h-box
                    :align :center
                    :gap "5px"
-                   :style {:padding-top "3"}
-                   :children [[small-button "import"]
-                              [small-button "export"]
+                   :style {:padding-top 3}
+                   :children [(when imp-hndl [small-button {:on-click imp-hndl} "import"])
+                              (when imp-hndl [small-button {:on-click exp-hndl} "export"])
                               [gap :size "1"]
-                              [small-button "clear"]]]]])))
+                              [small-button {:on-click #(do (reset! re-frame-events [])
+                                                            (swap! deb-data dissoc :event-data))} "clear"]]]]])))
 
-(def expand-by-default (reduce #(assoc-in %1 [:data-frisk %2 :expanded-paths] #{[]}) {} (range 1)))
+(defn event-bar [deb-data]
+  (let [evnt-key (reaction (first (get-in @deb-data [:event-data :event])))
+        clr (reaction (if @evnt-key (@evnt-key (:evnt-colors @deb-data)) ""))]
+    (fn []
+      [h-box
+       :style {:background-color "#4e5d6c"}
+       :children
+       [[label :label "Event"]
+        [gap :size "20px"]
+        [label :label "#"]
+        [:input {:style {:width "60px"}
+                 :placeholder "000000" :type "text" :value @clr :max-length "6"
+                 :on-change #(swap! deb-data assoc-in [:evnt-colors @evnt-key] (-> % .-target .-value))}]]])))
 
-(defn main-frisk []
-  (let [state-atom (reagent/atom expand-by-default)]
-    (fn [app-db checkbox-sorted-val]
-      (let [db @app-db
-            db' (if (and checkbox-sorted-val (map? db))
-                  (into (sorted-map) db)
-                  db)]
-        [frisk/Root db' 0 state-atom]))))
-
-(defn handler-frisk []
-  (let [state-atom (reagent/atom expand-by-default)]
-    (fn [handlers]
-      [frisk/Root @handlers 0 state-atom])))
-
-(defn main-view [_]
+(defn main-view [re-frame-data deb-data doc]
   (let [checkbox-sorted-val (reagent/atom true)]
-    (fn [re-frame-data]
+    (fn [_ _ _]
       [v-box
        :size "1"
        :style {:padding "0"}
        :children [[v-split
+                   :document doc
                    :size "1"
                    :style {:padding "0"
                            :margin  "0"}
                    :initial-split "0"
-                   :panel-1 [scroller
+                   :panel-1 [v-box
                              :size "1"
-                             :v-scroll :auto
-                             :h-scroll :auto
-                             :style {:background-color "#f3f3f3"}
-                             :child [box
-                                     :child [handler-frisk (:id-handler @re-frame-data)]]]
+                             :children
+                             [[box
+                               :style {:background-color "#4e5d6c"}
+                               :child [label :label "Active subscriptions"]]
+                              [scroller {:style {:background-color "#f3f3f3"}}
+                               [frisk/handler-frisk re-frame-data]]]]
                    :panel-2 [v-box
                              :size "1"
                              :children
                              [[v-split
+                               :document doc
                                :size "1"
                                :style {:padding "0"
                                        :margin  "0"}
@@ -130,36 +148,38 @@
                                          :size "1"
                                          :style {:background-color "#4e5d6c"}
                                          :children
-                                         [[checkbox
-                                           :model checkbox-sorted-val
-                                           :on-change (fn [val]
-                                                        (reset! checkbox-sorted-val val)
-                                                        (swap! (:app-db @re-frame-data) assoc :sorted true)
-                                                        (js/setTimeout #(swap! (:app-db @re-frame-data) dissoc :sorted) 200))
-                                           :label "sorted"]
-                                          [scroller
-                                           :size "1"
-                                           :v-scroll :auto
-                                           :h-scroll :auto
-                                           :style {:background-color "#f3f3f3"}
-                                           :child
-                                           [box
-                                            :child [main-frisk (:app-db @re-frame-data) @checkbox-sorted-val]]]]]
+                                         [[h-box
+                                           :children
+                                           [[label :label "app-db"]
+                                            [gap :size "20px"]
+                                            [checkbox
+                                              :model checkbox-sorted-val
+                                              :on-change (fn [val]
+                                                           (reset! checkbox-sorted-val val)
+                                                           (swap! (:app-db @re-frame-data) assoc :re-frisk-sorted true)
+                                                           (js/setTimeout #(swap! (:app-db @re-frame-data) dissoc :re-frisk-sorted) 100))
+                                              :label "sorted"]]]
+                                          [scroller {:style {:background-color "#f3f3f3"}}
+                                           [frisk/main-frisk re-frame-data checkbox-sorted-val]]]]
                                ;event frisk
-                               :panel-2 [box
+                               :panel-2 [v-box
                                          :size "1"
-                                         :style {:background-color "#4e5d6c"}
-                                         :child [p "Content 3"]]]
+                                         :children
+                                         [[event-bar deb-data]
+                                          [scroller {:style {:background-color "#f3f3f3"}}
+                                           [frisk/event-frisk deb-data]]]]]
                               [h-box
                                :style {:padding "0"}
                                :children [[gap :size "1"]
                                           [star]]]]]]]])))
 
-(defn main [re-frame-data re-frame-events]
+(defn main [re-frame-data re-frame-events deb-data & [doc imp-hndl exp-hndl]]
   [v-box
    :height "100%"
    :children [[h-split
                :size "1"
                :initial-split "20"
-               :panel-1 [events-view re-frame-events]
-               :panel-2 [main-view re-frame-data]]]])
+               :panel-1 [events-view re-frame-events deb-data imp-hndl exp-hndl]
+               :panel-2 [main-view re-frame-data deb-data doc]
+               :document doc]]])
+
