@@ -1,4 +1,4 @@
-(defproject re-frisk-shell "0.5.0"
+(defproject re-frisk-shell "0.5.1"
   :description "re-frisk ui shell"
   :url "https://github.com/flexsurfer/re-frisk"
   :license {:name "MIT"
@@ -14,7 +14,8 @@
 
   :clean-targets ^{:protect false} ["resources/re-frisk/js/compiled" "target"]
 
-  :figwheel {:http-server-root "re-frisk"}
+  :figwheel {:http-server-root "re-frisk"
+             :server-port 5309}
 
   :cljsbuild {:builds
               [{:id "dev"

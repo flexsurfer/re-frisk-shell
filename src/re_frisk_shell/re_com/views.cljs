@@ -14,6 +14,8 @@
   (fn [item checkbox-val deb-data]
     (let [clrs (:evnt-colors @deb-data)
           event (str (first (:event item)))
+          trace? (boolean (:trace item))
+          completed? (= :completed (get-in item [:trace :status]))
           selected? (= (get-in @deb-data [:event-data :indx]) (:indx item))
           namespace (str/split (str/replace event #":" "") #"/")
           splited-label (str/split (first namespace) #"\.")
@@ -28,8 +30,12 @@
          [:a
           {:href  "#"
            :class (str "list-group-item" (when selected? " active"))
-           :style {:padding 5 :white-space :pre :width "100%"}
+           :style (merge {:padding 5 :white-space :pre :width "100%"}
+                         (when (and trace? (not completed?))
+                           {:background-color :red}))
            :on-click #(swap! deb-data assoc :event-data item)}
+          (when (and trace? completed?)
+            [:span (str (get-in item [:trace :duration]) " ms ")])
           [:span (if (and @checkbox-val (> (count namespace) 1))
                    (str ":" (str/join "." (mapv first splited-label))
                         "/" (last namespace))
@@ -62,10 +68,15 @@
 
 (defn events-view [re-frame-events deb-data imp-hndl exp-hndl]
   (let [checkbox-val (reagent/atom true)
+        checkbox-sort-val (reagent/atom false)
+        trace? (reaction (boolean (:trace (first @re-frame-events))))
         text-val (reagent/atom "")
+        sorted-events (reaction (if @checkbox-sort-val
+                                  (sort-by #(get-in % [:trace :duration]) > @re-frame-events)
+                                  @re-frame-events))
         filtered-events (reaction (if (= @text-val "")
-                                    @re-frame-events
-                                    (filter (filter-event @text-val) @re-frame-events)))]
+                                    @sorted-events
+                                    (filter (filter-event @text-val) @sorted-events)))]
     (fn []
       [v-box
        :size "1"
@@ -87,6 +98,11 @@
                    :model checkbox-val
                    :on-change #(reset! checkbox-val %)
                    :label "truncate"]
+                  (when @trace?
+                    [checkbox
+                     :model checkbox-sort-val
+                     :on-change #(reset! checkbox-sort-val %)
+                     :label "sort by performance"])
                   ;events
                   [events-scroller filtered-events checkbox-val deb-data]
                   ;bottom buttons

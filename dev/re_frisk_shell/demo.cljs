@@ -16,7 +16,18 @@
   (reset! (:app-db @re-frame-data) val))
 
 (defn update-events [val]
-  (swap! re-frame-events conj val))
+  (let [indx (count @re-frame-events)]
+    (if (:trace (last @re-frame-events))
+      (swap! re-frame-events update-in [(dec indx) :trace] #(assoc % :duration val
+                                                                     :status :completed))
+      (swap! re-frame-events conj {:event val
+                                   :indx indx}))))
+
+(defn update-pre-events [val]
+  (let [indx (count @re-frame-events)]
+    (swap! re-frame-events conj {:event val
+                                 :trace {:status :handled}
+                                 :indx indx})))
 
 (defn update-id-handler [val]
   (reset! (:id-handler @re-frame-data) val))
@@ -43,6 +54,7 @@
   (case (first ?data)
     :refrisk/app-db (update-app-db (second ?data))
     :refrisk/events (update-events (second ?data))
+    :refrisk/pre-events (update-pre-events (second ?data))
     :refrisk/id-handler (update-id-handler (second ?data))))
 
 ;SENTE ROUTER
@@ -59,7 +71,7 @@
 
 ;REAGENT RENDER
 (defn mount []
-  (reagent/render [ui-re-com/main re-frame-data re-frame-events]
+  (reagent/render [ui-re-com/main re-frame-data re-frame-events deb-data js/document]
                   (.getElementById js/document "app")))
 
 ;ENTRY POINT
