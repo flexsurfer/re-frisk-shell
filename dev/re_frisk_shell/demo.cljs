@@ -32,14 +32,6 @@
 (defn update-id-handler [val]
   (reset! (:id-handler @re-frame-data) val))
 
-(let [{:keys [chsk ch-recv send-fn state]}
-      (sente/make-channel-socket-client!
-        "/chsk" ; Must match server Ring routing URL
-        {:type   :auto
-         :host   (str "localhost:4567") ;js/location.port)
-         :packer (sente-transit/get-transit-packer)})]
-  (def ch-chsk ch-recv)) ; ChannelSocket's receive channel
-
 ;SENTE HANDLERS
 (defmulti -event-msg-handler "Multimethod to handle Sente `event-msg`s" :id)
 
@@ -58,16 +50,14 @@
     :refrisk/id-handler (update-id-handler (second ?data))))
 
 ;SENTE ROUTER
-(defonce router_ (atom nil))
-
-(defn stop-router! []
-  (when-let [stop-f @router_] (stop-f)))
-
 (defn start-router! []
-  (stop-router!)
-  (reset! router_
-          (sente/start-client-chsk-router!
-            ch-chsk event-msg-handler)))
+  (let [{:keys [chsk ch-recv send-fn state]}
+        (sente/make-channel-socket-client!
+          "/chsk" ; Must match server Ring routing URL
+          {:type   :auto
+           :host   (str "localhost:4567") ;js/location.port)
+           :packer (sente-transit/get-transit-packer)})]
+    (sente/start-client-chsk-router! ch-recv event-msg-handler)))
 
 ;REAGENT RENDER
 (defn mount []
@@ -78,6 +68,12 @@
 (defn ^:export run [port]
   (start-router!)
   (mount))
+
+;ENTRY POINT TEST
+(defn ^:export runtest [port]
+  (mount)
+  (update-app-db {:test "TEST"})
+  (update-events [:test-event {:test "TEST"}]))
 
 (defn on-js-reload []
   (mount))
