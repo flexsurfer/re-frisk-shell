@@ -47,6 +47,11 @@
                     :backgroundColor "white"}}
    "Collapse all"])
 
+(defn node-clicked [{:keys [event emit-fn path] :as all}]
+  (.stopPropagation event)
+  (when (.-shiftKey event)
+    (emit-fn :copy path)))
+
 (defn NilText []
   [:span {:style (:nil styles)} (pr-str nil)])
 
@@ -65,7 +70,8 @@
      [:span {:style {:padding-left "20px"}}
       [Node node]])
    [:span
-    (when node {:style {:padding-left "10px"}})
+    (merge {:onClick #(node-clicked {:event %, :emit-fn emit-fn :path path})}
+           (when node {:style {:padding-left "10px"}}))
     (cond
      (nil? data)
      [NilText]
@@ -104,7 +110,7 @@
 
 (defn KeyValNode [{[k v] :data :keys [path expanded-paths emit-fn swappable]}]
   [:div {:style {:display "flex"}}
-    [DataFrisk {:node {:data k}
+    [DataFrisk {:node {:data k :emit-fn emit-fn :path (conj path k)}
                 :data v
                 :swappable swappable
                 :path (conj path k)
@@ -214,6 +220,32 @@
                   expanded-paths))))
       expanded-paths)))
 
+; Taken from prbroadfoot/data-frisk-reagent, MIT-licensed
+(defn copy-to-clipboard [data]
+  (print data)
+  (let [textArea (.createElement js/document "textarea")]
+    (doto textArea
+      ;; Put in top left corner of screen
+      (aset "style" "position" "fixed")
+      (aset "style" "top" 0)
+      (aset "style" "left" 0)
+      ;; Make it small
+      (aset "style" "width" "2em")
+      (aset "style" "height" "2em")
+      (aset "style" "padding" 0)
+      (aset "style" "border" "none")
+      (aset "style" "outline" "none")
+      (aset "style" "boxShadow" "none")
+      ;; Avoid flash of white box
+      (aset "style" "background" "transparent")
+      (aset "value" data))
+
+    (.appendChild (.-body js/document) textArea)
+    (.select textArea)
+
+    (.execCommand js/document "copy")
+    (.removeChild (.-body js/document) textArea)))
+
 (defn emit-fn-factory [state-atom id swappable]
   (fn [event & args]
     (case event
@@ -221,6 +253,7 @@
       :expand-all (swap! state-atom assoc-in [:data-frisk id :expanded-paths] (expand-all-paths (first args)))
       :contract (swap! state-atom update-in [:data-frisk id :expanded-paths] disj (first args))
       :collapse-all (swap! state-atom assoc-in [:data-frisk id :expanded-paths] #{})
+      :copy (copy-to-clipboard (first args))
       :changed (let [[path value] args]
                  (if (seq path)
                    (swap! swappable assoc-in path value)
