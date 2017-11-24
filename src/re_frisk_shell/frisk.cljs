@@ -1,5 +1,7 @@
 (ns re-frisk-shell.frisk
-  (:require [reagent.core :as reagent]))
+  (:require [reagent.core :as reagent]
+            [clojure.string :as str]
+            [cljs.reader :as reader]))
 ;;original idea Odin Hole Standal https://github.com/Odinodin/data-frisk-reagent
 (declare DataFrisk)
 
@@ -47,6 +49,17 @@
                     :backgroundColor "white"}}
    "Collapse all"])
 
+(defn FilterEditBox [emit-fn filter]
+  [:input {:type "text"
+             :style {:flex 1 :margin-left 5}
+             :value filter
+             :placeholder "[:a :b ...]"
+             :on-change #(emit-fn :filter-change (.. % -target -value))}])
+
+(defn FilterReset [emit-fn]
+  [:button {:style {:margin-right 5 :width 25}
+            :onClick #(emit-fn :filter-reset)} "X"])
+
 (defn node-clicked [{:keys [event emit-fn path] :as all}]
   (.stopPropagation event)
   (when (.-shiftKey event)
@@ -64,14 +77,30 @@
 (defn NumberText [data]
   [:span {:style (:numbers styles)} data])
 
-(defn Node [{:keys [data path emit-fn swappable node] :as val}]
+(defn is-prefix [needle haystack]
+  (and (< (count needle) (count haystack))
+       (= needle (subvec haystack 0 (count needle)))))
+
+(defn should-highlight [path filter]
+  (cond (= filter :err) nil
+        (= filter path) :match
+        (is-prefix path filter) :parent))
+
+(defn highlight-style [path filter]
+  (case (should-highlight path filter)
+    :match {:background-color "#ddd"}
+    :parent {:background-color "#ddd"}
+    nil))
+
+(defn Node [{:keys [data path emit-fn swappable node filter] :as val}]
   [:span {:style {:padding-top "5px"}}
    (when node
      [:span {:style {:padding-left "20px"}}
       [Node node]])
    [:span
-    (merge {:onClick #(node-clicked {:event %, :emit-fn emit-fn :path path})}
-           (when node {:style {:padding-left "10px"}}))
+    {:onClick #(node-clicked {:event %, :emit-fn emit-fn :path path})
+     :style (merge (when node {:padding-left "10px"})
+                   (highlight-style path filter))}
     (cond
      (nil? data)
      [NilText]
@@ -108,17 +137,24 @@
      :else
      (str data))]])
 
-(defn KeyValNode [{[k v] :data :keys [path expanded-paths emit-fn swappable]}]
+;; A path is expanded if it is explicitly expanded or if it is a part of
+;; current selection
+(defn is-expanded [expanded-paths path filter]
+  (or (get expanded-paths path)
+      (should-highlight path filter)))
+
+(defn KeyValNode [{[k v] :data :keys [path expanded-paths emit-fn swappable filter]}]
   [:div {:style {:display "flex"}}
-    [DataFrisk {:node {:data k :emit-fn emit-fn :path (conj path k)}
+    [DataFrisk {:node {:data k :emit-fn emit-fn :path (conj path k) :filter filter}
                 :data v
                 :swappable swappable
                 :path (conj path k)
+                :filter filter
                 :expanded-paths expanded-paths
                 :emit-fn emit-fn}]])
 
-(defn MapNode [{:keys [data path expanded-paths emit-fn node] :as all}]
-  (let [expanded? (get expanded-paths path)]
+(defn MapNode [{:keys [data path expanded-paths emit-fn node filter] :as all}]
+  (let [expanded? (is-expanded expanded-paths path filter)]
     [:div {:style {:display "flex" :padding-top "3px"}}
      [:div {:style {:flex "0 1 auto"}}
       (if (empty? data)
@@ -138,8 +174,8 @@
                         [KeyValNode (assoc all :data x)]])
                      data))]]))
 
-(defn ListVecNode [{:keys [data path expanded-paths emit-fn swappable node]}]
-  (let [expanded? (get expanded-paths path)]
+(defn ListVecNode [{:keys [data path expanded-paths emit-fn swappable node filter]}]
+  (let [expanded? (is-expanded expanded-paths path filter)]
     [:div {:style {:display "flex" :padding-top "3px"}}
      [:div {:style {:flex "0 1 auto"}}
       (if (empty? data)
@@ -158,11 +194,12 @@
                                           [DataFrisk {:data x
                                                       :swappable swappable
                                                       :path (conj path i)
+                                                      :filter filter
                                                       :expanded-paths expanded-paths
                                                       :emit-fn emit-fn}]]) data))]]))
 
-(defn SetNode [{:keys [data path expanded-paths emit-fn swappable node]}]
-  (let [expanded? (get expanded-paths path)]
+(defn SetNode [{:keys [data path expanded-paths emit-fn swappable node filter]}]
+  (let [expanded? (is-expanded expanded-paths path filter)]
     [:div {:style {:display "flex" :padding-top "3px"}}
      [:div {:style {:flex "0 1 auto"}}
       (if (empty? data)
@@ -181,10 +218,11 @@
                                           [DataFrisk {:data x
                                                       :swappable swappable
                                                       :path (conj path x)
+                                                      :filter filter
                                                       :expanded-paths expanded-paths
                                                       :emit-fn emit-fn}]]) data))]]))
 
-(defn DataFrisk [{:keys [data] :as all}]
+(defn DataFrisk [{:keys [data filter] :as all}]
   (cond (map? data) [MapNode all]
         (set? data) [SetNode all]
         (or (seq? data) (vector? data)) [ListVecNode all]
@@ -222,7 +260,6 @@
 
 ; Taken from prbroadfoot/data-frisk-reagent, MIT-licensed
 (defn copy-to-clipboard [data]
-  (print data)
   (let [textArea (.createElement js/document "textarea")]
     (doto textArea
       ;; Put in top left corner of screen
@@ -246,6 +283,23 @@
     (.execCommand js/document "copy")
     (.removeChild (.-body js/document) textArea)))
 
+(defn parenthesize [s]
+  (str "[" (-> s
+               (str/replace #"^[\[]" "")
+               (str/replace "[]]$" "")) "]"))
+
+(defn parse-filter [filter]
+  (let [filter (parenthesize filter)]
+    (try
+      (reader/read-string filter)
+      (catch js/Error e :err))))
+
+(defn update-filter [state id raw-filter]
+  (let [filter (parse-filter raw-filter)]
+    (-> state
+        (assoc-in [:data-frisk id :raw-filter] raw-filter)
+        (assoc-in [:data-frisk id :filter] filter))))
+
 (defn emit-fn-factory [state-atom id swappable]
   (fn [event & args]
     (case event
@@ -254,6 +308,8 @@
       :contract (swap! state-atom update-in [:data-frisk id :expanded-paths] disj (first args))
       :collapse-all (swap! state-atom assoc-in [:data-frisk id :expanded-paths] #{})
       :copy (copy-to-clipboard (first args))
+      :filter-change (swap! state-atom update-filter id (first args))
+      :filter-reset (swap! state-atom update-filter id "")
       :changed (let [[path value] args]
                  (if (seq path)
                    (swap! swappable assoc-in path value)
@@ -265,13 +321,16 @@
                     data)
         emit-fn (emit-fn-factory state-atom id swappable)]
     [:div {:style {:color "#444444"}}
-     [:div {:style {:padding "4px 2px"}}
+     [:div {:style {:padding "4px 2px" :display "flex"}}
       [ExpandAllButton emit-fn data]
-      [CollapseAllButton emit-fn]]
+      [CollapseAllButton emit-fn]
+      [FilterEditBox emit-fn (get-in data-frisk [id :raw-filter])]
+      [FilterReset emit-fn]]
      [DataFrisk {:data data
                  :swappable swappable
                  :path []
                  :expanded-paths (get-in data-frisk [id :expanded-paths])
+                 :filter (or (get-in data-frisk [id :filter]) [])
                  :emit-fn emit-fn}]]))
 
 (def expand-by-default (reduce #(assoc-in %1 [:data-frisk %2 :expanded-paths] #{[]}) {} (range 1)))
