@@ -62,8 +62,9 @@
 
 (defn node-clicked [{:keys [event emit-fn path] :as all}]
   (.stopPropagation event)
-  (when (.-shiftKey event)
-    (emit-fn :copy path)))
+  (if (.-shiftKey event)
+    (emit-fn :copy path)
+    (emit-fn :filter-change (str path))))
 
 (defn NilText []
   [:span {:style (:nil styles)} (pr-str nil)])
