@@ -352,7 +352,7 @@
 (defn prefixes [path]
   (set (reductions conj [] path)))
 
-;; Any node which is a prefix of a matched path need to be expnaded
+;; Any node which is a prefix of a matched path needs to be expnaded
 (defn expanded-matching-paths [paths]
   (apply set/union (map prefixes paths)))
 
