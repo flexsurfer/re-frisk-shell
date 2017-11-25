@@ -1,6 +1,7 @@
 (ns re-frisk-shell.frisk
   (:require [reagent.core :as reagent]
             [clojure.string :as str]
+            [clojure.set :as set]
             [cljs.reader :as reader]))
 ;;original idea Odin Hole Standal https://github.com/Odinodin/data-frisk-reagent
 (declare DataFrisk)
@@ -82,18 +83,7 @@
   (and (< (count needle) (count haystack))
        (= needle (subvec haystack 0 (count needle)))))
 
-(defn should-highlight [path filter]
-  (cond (= filter :err) nil
-        (= filter path) :match
-        (is-prefix path filter) :parent))
-
-(defn highlight-style [path filter]
-  (case (should-highlight path filter)
-    :match {:background-color "#ddd"}
-    :parent {:background-color "#ddd"}
-    nil))
-
-(defn Node [{:keys [data path emit-fn swappable node filter] :as val}]
+(defn Node [{:keys [data path emit-fn swappable node matching-paths] :as val}]
   [:span {:style {:padding-top "5px"}}
    (when node
      [:span {:style {:padding-left "20px"}}
@@ -101,7 +91,8 @@
    [:span
     {:onClick #(node-clicked {:event %, :emit-fn emit-fn :path path})
      :style (merge (when node {:padding-left "10px"})
-                   (highlight-style path filter))}
+                   (when (get matching-paths path)
+                     {:background-color "#fff9db"}))}
     (cond
      (nil? data)
      [NilText]
@@ -140,22 +131,26 @@
 
 ;; A path is expanded if it is explicitly expanded or if it is a part of
 ;; current selection
-(defn is-expanded [expanded-paths path filter]
+(defn is-expanded [expanded-paths expanded-matching-paths path]
   (or (get expanded-paths path)
-      (should-highlight path filter)))
+      (get expanded-matching-paths path)))
 
-(defn KeyValNode [{[k v] :data :keys [path expanded-paths emit-fn swappable filter]}]
+(defn KeyValNode [{[k v] :data :keys [path expanded-paths matching-paths expanded-matching-paths emit-fn swappable]}]
   [:div {:style {:display "flex"}}
-    [DataFrisk {:node {:data k :emit-fn emit-fn :path (conj path k) :filter filter}
-                :data v
-                :swappable swappable
-                :path (conj path k)
-                :filter filter
-                :expanded-paths expanded-paths
-                :emit-fn emit-fn}]])
+   [DataFrisk {:node {:data k
+                      :emit-fn emit-fn
+                      :path (conj path k)
+                      :matching-paths matching-paths}
+               :data v
+               :swappable swappable
+               :path (conj path k)
+               :expanded-paths expanded-paths
+               :matching-paths matching-paths
+               :expanded-matching-paths expanded-matching-paths
+               :emit-fn emit-fn}]])
 
-(defn MapNode [{:keys [data path expanded-paths emit-fn node filter] :as all}]
-  (let [expanded? (is-expanded expanded-paths path filter)]
+(defn MapNode [{:keys [data path expanded-paths matching-paths expanded-matching-paths emit-fn node] :as all}]
+  (let [expanded? (is-expanded expanded-paths expanded-matching-paths path)]
     [:div {:style {:display "flex" :padding-top "3px"}}
      [:div {:style {:flex "0 1 auto"}}
       (if (empty? data)
@@ -175,8 +170,8 @@
                         [KeyValNode (assoc all :data x)]])
                      data))]]))
 
-(defn ListVecNode [{:keys [data path expanded-paths emit-fn swappable node filter]}]
-  (let [expanded? (is-expanded expanded-paths path filter)]
+(defn ListVecNode [{:keys [data path expanded-paths matching-paths expanded-matching-paths emit-fn swappable node]}]
+  (let [expanded? (is-expanded expanded-paths expanded-matching-paths path)]
     [:div {:style {:display "flex" :padding-top "3px"}}
      [:div {:style {:flex "0 1 auto"}}
       (if (empty? data)
@@ -195,12 +190,13 @@
                                           [DataFrisk {:data x
                                                       :swappable swappable
                                                       :path (conj path i)
-                                                      :filter filter
                                                       :expanded-paths expanded-paths
+                                                      :matching-paths matching-paths
+                                                      :expanded-matching-paths expanded-matching-paths
                                                       :emit-fn emit-fn}]]) data))]]))
 
-(defn SetNode [{:keys [data path expanded-paths emit-fn swappable node filter]}]
-  (let [expanded? (is-expanded expanded-paths path filter)]
+(defn SetNode [{:keys [data path expanded-paths matching-paths expanded-matching-paths emit-fn swappable node]}]
+  (let [expanded? (is-expanded expanded-paths expanded-matching-paths path)]
     [:div {:style {:display "flex" :padding-top "3px"}}
      [:div {:style {:flex "0 1 auto"}}
       (if (empty? data)
@@ -219,11 +215,12 @@
                                           [DataFrisk {:data x
                                                       :swappable swappable
                                                       :path (conj path x)
-                                                      :filter filter
                                                       :expanded-paths expanded-paths
+                                                      :matching-paths matching-paths
+                                                      :expanded-matching-paths expanded-matching-paths
                                                       :emit-fn emit-fn}]]) data))]]))
 
-(defn DataFrisk [{:keys [data filter] :as all}]
+(defn DataFrisk [{:keys [data] :as all}]
   (cond (map? data) [MapNode all]
         (set? data) [SetNode all]
         (or (seq? data) (vector? data)) [ListVecNode all]
@@ -293,7 +290,7 @@
   (let [filter (parenthesize filter)]
     (try
       (reader/read-string filter)
-      (catch js/Error e :err))))
+      (catch js/Error e []))))
 
 (defn update-filter [state id raw-filter]
   (let [filter (parse-filter raw-filter)]
@@ -316,10 +313,56 @@
                    (swap! swappable assoc-in path value)
                    (reset! swappable value))))))
 
+(defn match-value [value filter-part]
+  (str/includes? (str/lower-case (str value)) (str/lower-case (str filter-part))))
+
+(defn match-path [filter path]
+  (cond (empty? filter) nil
+        (empty? path) nil
+        ;; [foo] matches [... *foo*]
+        (= (count filter) 1) (match-value (last path) (first filter))
+        ;; [foo bar baz] matches [*foo* ... *bar* ... *baz*]
+        ;; and [...*foo* ... *bar* ... *baz*]
+        :else (if (match-value (first path) (first filter))
+                (match-path (rest filter) (rest path))
+                (match-path filter (rest path)))))
+
+(defn walk-paths
+  ([data]
+   (walk-paths [] data))
+  ([prefix data]
+   (conj
+    (cond (map? data)
+          (apply set/union
+                 (map (fn [[k v]] (walk-paths (conj prefix k) v)) data))
+          (set? data)
+          (apply set/union
+                 (map (fn [v] (walk-paths (conj prefix v) v)) data))
+          (or (seq? data) (vector? data))
+          (apply set/union
+                 (map-indexed
+                  (fn [i v] (walk-paths (conj prefix i) v)) data))
+          (satisfies? IDeref data) (walk-paths prefix @data)
+          :else #{})
+    prefix)))
+
+(defn matching-paths [data filter']
+  (set (filter #(match-path filter' %) (walk-paths data))))
+
+(defn prefixes [path]
+  (set (reductions conj [] path)))
+
+;; Any node which is a prefix of a matched path need to be expnaded
+(defn expanded-matching-paths [paths]
+  (apply set/union (map prefixes paths)))
+
 (defn Root [data id state-atom]
   (let [data-frisk (:data-frisk @state-atom)
         swappable (when (satisfies? IAtom data)
                     data)
+        filter (or (get-in data-frisk [id :filter]) [])
+        matching (matching-paths data filter)
+        expanded-matching (expanded-matching-paths matching)
         emit-fn (emit-fn-factory state-atom id swappable)]
     [:div {:style {:color "#444444"}}
      [:div {:style {:padding "4px 2px" :display "flex"}}
@@ -331,6 +374,8 @@
                  :swappable swappable
                  :path []
                  :expanded-paths (get-in data-frisk [id :expanded-paths])
+                 :matching-paths matching
+                 :expanded-matching-paths expanded-matching
                  :filter (or (get-in data-frisk [id :filter]) [])
                  :emit-fn emit-fn}]]))
 
