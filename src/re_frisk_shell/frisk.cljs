@@ -16,7 +16,7 @@
 (defn ExpandButton [{:keys [expanded? path emit-fn]}]
   [:button {:style {:border 0
                     :backgroundColor "transparent" :width "20px" :height "20px"}
-            :onClick #(emit-fn (if expanded? :contract :expand) path)}
+            :on-click #(emit-fn (if expanded? :contract :expand) path)}
    [:svg {:viewBox "0 0 100 100"
           :width "100%" :height "100%"
           :style {:transition "all 0.2s ease"
@@ -35,7 +35,7 @@
    :shell-visible-button {:backgroundColor "#4EE24E"}})
 
 (defn ExpandAllButton [emit-fn data]
-  [:button {:onClick #(emit-fn :expand-all data)
+  [:button {:on-click #(emit-fn :expand-all data)
             :style {:padding "0px"
                     :borderTopLeftRadius "2px"
                     :borderBottomLeftRadius "2px"
@@ -45,7 +45,7 @@
    "Expand all"])
 
 (defn CollapseAllButton [emit-fn data]
-  [:button {:onClick #(emit-fn :collapse-all)
+  [:button {:on-click #(emit-fn :collapse-all)
             :style {:padding "0px"
                     :cursor "pointer"
                     :borderTopRightRadius "2px"
@@ -69,7 +69,7 @@
 
 (defn FilterReset [emit-fn]
   [:button {:style {:margin-right 5 :width 25}
-            :onClick #(emit-fn :filter-change "" 0)} "X"])
+            :on-click #(emit-fn :filter-change "" 0)} "X"])
 
 (defn node-clicked [{:keys [event emit-fn path] :as all}]
   (.stopPropagation event)
@@ -97,7 +97,7 @@
      [:span {:style {:padding-left "20px"}}
       [Node node]])
    [:span
-    {:onClick #(node-clicked {:event % :emit-fn emit-fn :path path})
+    {:on-click #(node-clicked {:event % :emit-fn emit-fn :path path})
      :style (merge (when node {:padding-left "10px"})
                    (when (get matching-paths path)
                      {:background-color "#fff9db"}))}
