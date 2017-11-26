@@ -54,7 +54,7 @@
   [:input {:type "text"
              :style {:flex 1 :margin-left 5}
              :value filter
-             :placeholder "[:a :b ...]"
+             :placeholder "Type here to find keys..."
              :on-change #(emit-fn :filter-change (.. % -target -value))}])
 
 (defn FilterReset [emit-fn]
