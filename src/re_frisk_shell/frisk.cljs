@@ -73,9 +73,7 @@
 
 (defn node-clicked [{:keys [event emit-fn path] :as all}]
   (.stopPropagation event)
-  (if (.-shiftKey event)
-    (emit-fn :copy path)
-    (emit-fn :filter-change (str path) 0)))
+  (emit-fn :filter-change (str path) 0))
 
 (defn NilText []
   [:span {:style (:nil styles)} (pr-str nil)])
@@ -266,31 +264,6 @@
                   expanded-paths))))
       expanded-paths)))
 
-; Taken from prbroadfoot/data-frisk-reagent, MIT-licensed
-(defn copy-to-clipboard [data]
-  (let [textArea (.createElement js/document "textarea")]
-    (doto textArea
-      ;; Put in top left corner of screen
-      (aset "style" "position" "fixed")
-      (aset "style" "top" 0)
-      (aset "style" "left" 0)
-      ;; Make it small
-      (aset "style" "width" "2em")
-      (aset "style" "height" "2em")
-      (aset "style" "padding" 0)
-      (aset "style" "border" "none")
-      (aset "style" "outline" "none")
-      (aset "style" "boxShadow" "none")
-      ;; Avoid flash of white box
-      (aset "style" "background" "transparent")
-      (aset "value" data))
-
-    (.appendChild (.-body js/document) textArea)
-    (.select textArea)
-
-    (.execCommand js/document "copy")
-    (.removeChild (.-body js/document) textArea)))
-
 (defn parenthesize [s]
   (str "[" (-> s
                (str/replace #"^[\[]" "")
@@ -313,7 +286,6 @@
       :expand-all (swap! state-atom assoc-in [:data-frisk id :expanded-paths] (expand-all-paths (first args)))
       :contract (swap! state-atom update-in [:data-frisk id :expanded-paths] disj (first args))
       :collapse-all (swap! state-atom assoc-in [:data-frisk id :expanded-paths] #{})
-      :copy (copy-to-clipboard (first args))
       :filter-change
       (do
         (swap! state-atom assoc-in [:data-frisk id :raw-filter] (first args))
