@@ -6,6 +6,13 @@
 ;;original idea Odin Hole Standal https://github.com/Odinodin/data-frisk-reagent
 (declare DataFrisk)
 
+(def debounce-pending (atom {}))
+(defn debounce [key delay f]
+  (let [old-timeout (key @debounce-pending)
+        new-timeout (js/setTimeout f delay)]
+    (swap! debounce-pending assoc key new-timeout)
+    (js/clearTimeout old-timeout)))
+
 (defn ExpandButton [{:keys [expanded? path emit-fn]}]
   [:button {:style {:border 0
                     :backgroundColor "transparent" :width "20px" :height "20px"}
@@ -50,22 +57,25 @@
                     :backgroundColor "white"}}
    "Collapse all"])
 
+(def edit-debounce-ms 150)
+
 (defn FilterEditBox [emit-fn filter]
   [:input {:type "text"
-             :style {:flex 1 :margin-left 5}
-             :value filter
-             :placeholder "Type here to find keys..."
-             :on-change #(emit-fn :filter-change (.. % -target -value))}])
+           :style {:flex 1 :margin-left 5}
+           :value filter
+           :placeholder "Type here to find keys..."
+           :on-change #(emit-fn :filter-change (.. % -target -value)
+                                edit-debounce-ms)}])
 
 (defn FilterReset [emit-fn]
   [:button {:style {:margin-right 5 :width 25}
-            :onClick #(emit-fn :filter-reset)} "X"])
+            :onClick #(emit-fn :filter-change "" 0)} "X"])
 
 (defn node-clicked [{:keys [event emit-fn path] :as all}]
   (.stopPropagation event)
   (if (.-shiftKey event)
     (emit-fn :copy path)
-    (emit-fn :filter-change (str path))))
+    (emit-fn :filter-change (str path) 0)))
 
 (defn NilText []
   [:span {:style (:nil styles)} (pr-str nil)])
@@ -292,11 +302,9 @@
       (reader/read-string filter)
       (catch js/Error e []))))
 
-(defn update-filter [state id raw-filter]
-  (let [filter (parse-filter raw-filter)]
-    (-> state
-        (assoc-in [:data-frisk id :raw-filter] raw-filter)
-        (assoc-in [:data-frisk id :filter] filter))))
+(defn apply-filter [state id]
+  (let [filter (parse-filter (get-in state [:data-frisk id :raw-filter]))]
+    (assoc-in state [:data-frisk id :filter] filter)))
 
 (defn emit-fn-factory [state-atom id swappable]
   (fn [event & args]
@@ -306,8 +314,11 @@
       :contract (swap! state-atom update-in [:data-frisk id :expanded-paths] disj (first args))
       :collapse-all (swap! state-atom assoc-in [:data-frisk id :expanded-paths] #{})
       :copy (copy-to-clipboard (first args))
-      :filter-change (swap! state-atom update-filter id (first args))
-      :filter-reset (swap! state-atom update-filter id "")
+      :filter-change
+      (do
+        (swap! state-atom assoc-in [:data-frisk id :raw-filter] (first args))
+        (debounce :filter-change (second args)
+                  #(swap! state-atom apply-filter id)))
       :changed (let [[path value] args]
                  (if (seq path)
                    (swap! swappable assoc-in path value)
