@@ -99,7 +99,7 @@
      [:span {:style {:padding-left "20px"}}
       [Node node]])
    [:span
-    {:onClick #(node-clicked {:event %, :emit-fn emit-fn :path path})
+    {:onClick #(node-clicked {:event % :emit-fn emit-fn :path path})
      :style (merge (when node {:padding-left "10px"})
                    (when (get matching-paths path)
                      {:background-color "#fff9db"}))}
