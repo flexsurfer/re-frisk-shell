@@ -57,7 +57,7 @@
                     :backgroundColor "white"}}
    "Collapse all"])
 
-(def edit-debounce-ms 150)
+(def edit-debounce-ms 400)
 
 (defn FilterEditBox [emit-fn filter]
   [:input {:type "text"
