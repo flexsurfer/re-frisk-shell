@@ -69,10 +69,17 @@
   (start-router!)
   (mount))
 
+(def test-state {:map {:kw "keyword"}
+                 :map-string {"str" "string"}
+                 :set #{1 2 3 {:inset 'inset}}
+                 :array [0 1 2 [0 1 2 {:inarray 'inarray}]]
+                 :map-complicated {[0 1 2 #{:foo}] 42}
+                 :kinda-number {"0x0abc" -1}})
+
 ;ENTRY POINT TEST
 (defn ^:export runtest [port]
   (mount)
-  (update-app-db {:test "TEST"})
+  (update-app-db {:test test-state})
   (update-events [:test-event {:test "TEST"}]))
 
 (defn on-js-reload []
