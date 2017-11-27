@@ -359,7 +359,6 @@
                  :expanded-paths (get-in data-frisk [id :expanded-paths])
                  :matching-paths matching
                  :expanded-matching-paths expanded-matching
-                 :filter (or (get-in data-frisk [id :filter]) [])
                  :emit-fn emit-fn}]]))
 
 (def expand-by-default (reduce #(assoc-in %1 [:data-frisk %2 :expanded-paths] #{[]}) {} (range 1)))
