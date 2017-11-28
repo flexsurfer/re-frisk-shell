@@ -2,7 +2,10 @@
   (:require [reagent.core :as reagent]
             [clojure.string :as str]
             [clojure.set :as set]
-            [cljs.reader :as reader]))
+            [cljs.reader :as reader]
+            [cljs.tools.reader.reader-types :as reader-types]
+            [re-frisk-shell.filter-parser :as filter-parser]
+            [re-frisk-shell.filter-matcher :as filter-matcher]))
 ;;original idea Odin Hole Standal https://github.com/Odinodin/data-frisk-reagent
 (declare DataFrisk)
 
@@ -264,19 +267,8 @@
                   expanded-paths))))
       expanded-paths)))
 
-(defn parenthesize [s]
-  (str "[" (-> s
-               (str/replace #"^[\[]" "")
-               (str/replace "[]]$" "")) "]"))
-
-(defn parse-filter [filter]
-  (let [filter (parenthesize filter)]
-    (try
-      (reader/read-string filter)
-      (catch js/Error e []))))
-
 (defn apply-filter [state id]
-  (let [filter (parse-filter (get-in state [:data-frisk id :raw-filter]))]
+  (let [filter (filter-parser/parse (get-in state [:data-frisk id :raw-filter]))]
     (assoc-in state [:data-frisk id :filter] filter)))
 
 (defn emit-fn-factory [state-atom id swappable]
@@ -295,20 +287,6 @@
                  (if (seq path)
                    (swap! swappable assoc-in path value)
                    (reset! swappable value))))))
-
-(defn match-value [value filter-part]
-  (str/includes? (str/lower-case (str value)) (str/lower-case (str filter-part))))
-
-(defn match-path [filter path]
-  (cond (empty? filter) nil
-        (empty? path) nil
-        ;; [foo] matches [... *foo*]
-        (= (count filter) 1) (match-value (last path) (first filter))
-        ;; [foo bar baz] matches [*foo* ... *bar* ... *baz*]
-        ;; and [...*foo* ... *bar* ... *baz*]
-        :else (if (match-value (first path) (first filter))
-                (match-path (rest filter) (rest path))
-                (match-path filter (rest path)))))
 
 (defn walk-paths
   ([data]
@@ -330,7 +308,7 @@
     prefix)))
 
 (defn matching-paths [data filter']
-  (set (filter #(match-path filter' %) (walk-paths data))))
+  (set (filter #(filter-matcher/match filter' %) (walk-paths data))))
 
 (defn prefixes [path]
   (set (reductions conj [] path)))
