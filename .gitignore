@@ -1,0 +1,5 @@
+/target/
+/out/
+/resources/test/
+/resources/re-frisk/js/
+/figwheel_server.log
