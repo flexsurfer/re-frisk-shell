@@ -358,4 +358,6 @@
 (defn event-frisk [deb-data]
   (let [state-atom (reagent/atom expand-by-default)]
     (fn [_]
-      [Root (get-in @deb-data [:event-data :event]) 0 state-atom])))
+      [Root {:event-vector (get-in @deb-data [:event-data :event])
+             :app-db-diff (get-in @deb-data [:event-data :app-db-diff])}
+       0 state-atom])))
