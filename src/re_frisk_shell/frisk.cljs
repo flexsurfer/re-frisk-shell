@@ -5,7 +5,10 @@
             [cljs.reader :as reader]
             [cljs.tools.reader.reader-types :as reader-types]
             [re-frisk-shell.filter-parser :as filter-parser]
-            [re-frisk-shell.filter-matcher :as filter-matcher]))
+            [re-frisk-shell.filter-matcher :as filter-matcher]
+            [re-com.core :refer [v-box]]
+            [re-frisk-shell.re-com.ui :refer [scroller]]))
+
 ;;original idea Odin Hole Standal https://github.com/Odinodin/data-frisk-reagent
 (declare DataFrisk)
 
@@ -325,19 +328,23 @@
         matching (matching-paths data filter)
         expanded-matching (expanded-matching-paths matching)
         emit-fn (emit-fn-factory state-atom id swappable)]
-    [:div {:style {:color "#444444"}}
-     [:div {:style {:padding "4px 2px" :display "flex"}}
-      [ExpandAllButton emit-fn data]
-      [CollapseAllButton emit-fn]
-      [FilterEditBox emit-fn (get-in data-frisk [id :raw-filter])]
-      [FilterReset emit-fn]]
-     [DataFrisk {:data data
-                 :swappable swappable
-                 :path []
-                 :expanded-paths (get-in data-frisk [id :expanded-paths])
-                 :matching-paths matching
-                 :expanded-matching-paths expanded-matching
-                 :emit-fn emit-fn}]]))
+    [v-box :style {:background-color "#f3f3f3" :color "#444444"}
+     :size "1"
+     :children
+     [[:div {:style {:padding "4px 2px" :display "flex"}}
+       [ExpandAllButton emit-fn data]
+       [CollapseAllButton emit-fn]
+       [:div {:style {:padding "2px" :margin-left "4px" :background-color "#fff9db"}} (count matching)]
+       [FilterEditBox emit-fn (get-in data-frisk [id :raw-filter])]
+       [FilterReset emit-fn]]
+      [scroller
+       [DataFrisk {:data data
+                   :swappable swappable
+                   :path []
+                   :expanded-paths (get-in data-frisk [id :expanded-paths])
+                   :matching-paths matching
+                   :expanded-matching-paths expanded-matching
+                   :emit-fn emit-fn}]]]]))
 
 (def expand-by-default (reduce #(assoc-in %1 [:data-frisk %2 :expanded-paths] #{[]}) {} (range 1)))
 
@@ -346,7 +353,12 @@
     (fn [_]
       (let [db @(:app-db @re-frame-data)
             db' (if (and @checkbox-sorted-val (map? db))
-                  (into (sorted-map) db)
+                  (try
+                    (into (sorted-map) db)
+                    (catch :default e
+                      (do
+                        (reset! checkbox-sorted-val false)
+                        db)))
                   db)]
         [Root db' 0 state-atom]))))
 

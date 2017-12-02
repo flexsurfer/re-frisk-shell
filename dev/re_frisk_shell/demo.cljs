@@ -16,11 +16,16 @@
   (reset! (:app-db @re-frame-data) val))
 
 (defn update-events [val]
-  (let [indx (count @re-frame-events)]
+  (let [indx (count @re-frame-events)
+        app-db-diff (:app-db-diff val)
+        duration (if (map? val) (:time val) val)
+        event (if (map? val) (:event val) val)]
     (if (:trace (last @re-frame-events))
-      (swap! re-frame-events update-in [(dec indx) :trace] #(assoc % :duration val
-                                                                     :status :completed))
-      (swap! re-frame-events conj {:event val
+      (swap! re-frame-events update-in [(dec indx)]
+             #(assoc % :app-db-diff app-db-diff
+                       :trace {:duration duration :status :completed}))
+      (swap! re-frame-events conj {:event event
+                                   :app-db-diff app-db-diff
                                    :indx indx}))))
 
 (defn update-pre-events [val]
@@ -80,7 +85,8 @@
 (defn ^:export runtest [port]
   (mount)
   (update-app-db {:test test-state})
-  (update-events [:test-event {:test "TEST"}]))
+  (update-events [:test-event {:test "TEST"}])
+  (update-events [:test-event {:test "TEST2"}]))
 
 (defn on-js-reload []
   (mount))

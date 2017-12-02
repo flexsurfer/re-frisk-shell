@@ -123,20 +123,27 @@
       [h-box
        :style {:background-color "#4e5d6c"}
        :children
-       [[label :label "Event"]
-        [gap :size "20px"]
-        [label :label "#"]
-        [:input {:style {:width "60px"}
-                 :placeholder "000000" :type "text" :value @clr :max-length "6"
-                 :on-change #(swap! deb-data assoc-in [:evnt-colors @evnt-key] (-> % .-target .-value))}]]])))
+       [[label :label "Event" :style {:margin "4px"}]
+        (when @evnt-key
+          [label :label @evnt-key :style {:margin "4px" :color "#df691a"}])
+        (when @evnt-key
+          [label :label "#" :style {:margin "4px"}])
+        (when @evnt-key
+          [:input {:style {:width "60px"}
+                   :placeholder "000000" :type "text" :value @clr :max-length "6"
+                   :on-change #(swap! deb-data assoc-in [:evnt-colors @evnt-key] (-> % .-target .-value))}])]])))
 
 (defn main-view [re-frame-data deb-data doc]
-  (let [checkbox-sorted-val (reagent/atom true)]
+  (let [checkbox-sorted-val (reagent/atom true)
+        open-event-split? (reaction (boolean (get-in @deb-data [:event-data :event])))]
     (fn [_ _ _]
       [v-box
        :size "1"
        :style {:padding "0"}
-       :children [[v-split
+       :children [[box
+                   :style {:background-color "#4e5d6c"}
+                   :child [label :label "Active subscriptions"]]
+                  [v-split
                    :document doc
                    :size "1"
                    :style {:padding "0"
@@ -145,11 +152,7 @@
                    :panel-1 [v-box
                              :size "1"
                              :children
-                             [[box
-                               :style {:background-color "#4e5d6c"}
-                               :child [label :label "Active subscriptions"]]
-                              [scroller {:style {:background-color "#f3f3f3"}}
-                               [frisk/handler-frisk re-frame-data]]]]
+                             [[frisk/handler-frisk re-frame-data]]]
                    :panel-2 [v-box
                              :size "1"
                              :children
@@ -159,6 +162,7 @@
                                :style {:padding "0"
                                        :margin  "0"}
                                :initial-split "100"
+                               :open-bottom-split? open-event-split?
                                ;MAIN FRISK
                                :panel-1 [v-box
                                          :size "1"
@@ -175,15 +179,13 @@
                                                            (swap! (:app-db @re-frame-data) assoc :re-frisk-sorted true)
                                                            (js/setTimeout #(swap! (:app-db @re-frame-data) dissoc :re-frisk-sorted) 100))
                                               :label "sorted"]]]
-                                          [scroller {:style {:background-color "#f3f3f3"}}
-                                           [frisk/main-frisk re-frame-data checkbox-sorted-val]]]]
+                                          [frisk/main-frisk re-frame-data checkbox-sorted-val]
+                                          [event-bar deb-data]]]
                                ;event frisk
                                :panel-2 [v-box
                                          :size "1"
                                          :children
-                                         [[event-bar deb-data]
-                                          [scroller {:style {:background-color "#f3f3f3"}}
-                                           [frisk/event-frisk deb-data]]]]]
+                                         [[frisk/event-frisk deb-data]]]]
                               [h-box
                                :style {:padding "0"}
                                :children [[gap :size "1"]

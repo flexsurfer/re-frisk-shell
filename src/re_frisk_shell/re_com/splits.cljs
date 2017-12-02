@@ -115,7 +115,7 @@
 
 (defn v-split
   "Returns markup for a vertical layout component"
-  [& {:keys [size width height on-split-change initial-split splitter-size margin document]
+  [& {:keys [size width height on-split-change initial-split splitter-size margin document open-bottom-split?]
       :or   {size "auto" initial-split 50 splitter-size "8px" margin "8px" document js/document}
       :as   args}]
   (let [container-id         (gensym "v-split-")
@@ -177,10 +177,11 @@
 
     (fn
       [& {:keys [panel-1 panel-2 _size _width _height _on-split-change _initial-split _splitter-size _margin class style attr]}]
-      [:div (make-container-attrs class style attr @dragging?)
-       [:div (make-panel-attrs "re-v-split-top" @dragging? @split-perc)
-        panel-1]
-       [:div (make-splitter-attrs "re-v-split-splitter")
-        [drag-handle :horizontal @over?]]
-       [:div (make-panel-attrs "re-v-split-bottom" @dragging? (- 100 @split-perc))
-        panel-2]])))
+      (let [perc (if (and (= @split-perc (js/parseInt initial-split)) open-bottom-split? @open-bottom-split?) "70" @split-perc)]
+        [:div (make-container-attrs class style attr @dragging?)
+         [:div (make-panel-attrs "re-v-split-top" @dragging? perc)
+          panel-1]
+         [:div (make-splitter-attrs "re-v-split-splitter")
+          [drag-handle :horizontal @over?]]
+         [:div (make-panel-attrs "re-v-split-bottom" @dragging? (- 100 perc))
+          panel-2]]))))
