@@ -1,9 +1,10 @@
-<?xml version="1.0" encoding="UTF-8"?><project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
   <groupId>re-frisk-shell</groupId>
   <artifactId>re-frisk-shell</artifactId>
   <packaging>jar</packaging>
-  <version>0.5.0</version>
+  <version>0.5.2</version>
   <name>re-frisk-shell</name>
   <description>re-frisk ui shell</description>
   <url>https://github.com/flexsurfer/re-frisk</url>
@@ -14,11 +15,10 @@
     </license>
   </licenses>
   <scm>
-    <connection>scm:git:git://github.com/flexsurfer/re-frisk-shell.git</connection>
-    <developerConnection>scm:git:ssh://git@github.com/flexsurfer/re-frisk-shell.git</developerConnection>
-    <tag>1e4a4b45729d3b61399de72a82baa6defa2cceb7
-</tag>
-    <url>https://github.com/flexsurfer/re-frisk-shell</url>
+    <url>https://github.com/yogthos/re-frisk-shell</url>
+    <connection>scm:git:git://github.com/yogthos/re-frisk-shell.git</connection>
+    <developerConnection>scm:git:ssh://git@github.com/yogthos/re-frisk-shell.git</developerConnection>
+    <tag>db5a76dcdb8c6313a0063f57926115076fc2d9c6</tag>
   </scm>
   <build>
     <sourceDirectory>src</sourceDirectory>
@@ -50,7 +50,7 @@
     </repository>
     <repository>
       <id>clojars</id>
-      <url>https://clojars.org/repo/</url>
+      <url>https://repo.clojars.org/</url>
       <snapshots>
         <enabled>true</enabled>
       </snapshots>
@@ -74,6 +74,16 @@
       <version>2.1.0</version>
     </dependency>
     <dependency>
+      <groupId>org.clojure</groupId>
+      <artifactId>clojure</artifactId>
+      <version>1.9.0-RC1</version>
+    </dependency>
+    <dependency>
+      <groupId>org.clojure</groupId>
+      <artifactId>clojurescript</artifactId>
+      <version>1.9.946</version>
+    </dependency>
+    <dependency>
       <groupId>binaryage</groupId>
       <artifactId>devtools</artifactId>
       <version>0.7.2</version>
@@ -83,6 +93,18 @@
       <groupId>com.taoensso</groupId>
       <artifactId>sente</artifactId>
       <version>1.11.0</version>
+      <exclusions>
+        <exclusion>
+          <artifactId>core.async</artifactId>
+          <groupId>org.clojure</groupId>
+        </exclusion>
+      </exclusions>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.clojure</groupId>
+      <artifactId>core.async</artifactId>
+      <version>0.3.443</version>
       <scope>test</scope>
     </dependency>
     <dependency>

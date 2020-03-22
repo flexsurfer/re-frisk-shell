@@ -5,7 +5,7 @@
             :url "https://opensource.org/licenses/MIT"}
 
   :dependencies [[reagent "0.7.0"]
-                 [re-com "2.1.0"]
+                 [re-com "2.8.0"]
                  [org.clojure/clojure "1.9.0-RC1"]
                  [org.clojure/clojurescript "1.9.946"]]
 
