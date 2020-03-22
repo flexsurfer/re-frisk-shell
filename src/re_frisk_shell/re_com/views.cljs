@@ -1,6 +1,7 @@
 (ns re-frisk-shell.re-com.views
   (:require-macros [reagent.ratom :refer [reaction]])
-  (:require [reagent.core :as reagent]
+  (:require [reagent.dom :as rdom]
+            [reagent.core :as reagent]
             [re-frisk-shell.re-com.ui :refer [small-button scroller]]
             [re-frisk-shell.re-com.vendors :refer [star]]
             [re-com.core :refer [v-box h-box gap box label
@@ -53,7 +54,7 @@
     {:display-name "debugger-messages"
      :component-did-update
                    (fn [this]
-                     (let [n (reagent/dom-node this)]
+                     (let [n (rdom/dom-node this)]
                        (when (:scroll-bottom? @deb-data)
                          (set! (.-scrollTop n) (.-scrollHeight n)))))
      :reagent-render
