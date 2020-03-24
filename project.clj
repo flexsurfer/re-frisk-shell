@@ -1,13 +1,13 @@
-(defproject re-frisk-shell "0.5.2"
+(defproject re-frisk-shell "0.5.3"
   :description "re-frisk ui shell"
   :url "https://github.com/flexsurfer/re-frisk"
   :license {:name "MIT"
             :url "https://opensource.org/licenses/MIT"}
 
-  :dependencies [[reagent "0.7.0"]
+  :dependencies [[reagent "0.10.0"]
                  [re-com "2.8.0"]
-                 [org.clojure/clojure "1.9.0-RC1"]
-                 [org.clojure/clojurescript "1.9.946"]]
+                 [org.clojure/clojure "1.10.1"]
+                 [org.clojure/clojurescript "1.10.597"]]
 
   :plugins [[lein-cljsbuild "1.1.7" :exclusions [[org.clojure/clojure]]]
             [lein-figwheel "0.5.13"]
